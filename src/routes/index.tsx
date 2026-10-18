@@ -22,13 +22,6 @@ type Phase = "lobby" | "chat" | "vote" | "reveal";
 const ROUND = 60;
 const ALIASES = ["Nova", "Kai", "Mika", "Juno", "Ezra", "Lio", "Sam", "Rae"];
 
-function crowdVote(secret: Secret) {
-  const accuracy = 0.4 + Math.random() * 0.4;
-  const total = 40 + Math.floor(Math.random() * 160);
-  const correct = Math.round(total * accuracy);
-  const human = secret === "human" ? correct : total - correct;
-  return { human, synth: total - human, total };
-}
 
 function Game() {
   const [nick, setNick] = useState("");
@@ -41,7 +34,6 @@ function Game() {
   const [showTyping, setShowTyping] = useState(false);
   const [left, setLeft] = useState(ROUND);
   const [guess, setGuess] = useState<Secret | null>(null);
-  const [crowd, setCrowd] = useState({ human: 0, synth: 0, total: 0 });
   const [score, setScore] = useState({ w: 0, n: 0 });
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -153,7 +145,6 @@ function Game() {
 
   function vote(g: Secret) {
     setGuess(g);
-    setCrowd(crowdVote(secret));
     const s = { w: score.w + (g === secret ? 1 : 0), n: score.n + 1 };
     setScore(s);
     localStorage.setItem("hos-score", JSON.stringify(s));
@@ -183,8 +174,7 @@ function Game() {
             </h2>
             <p className="mt-4 text-muted-foreground">
               Du chattest eine Minute mit einem Fremden. Vielleicht ein Mensch, vielleicht eine
-              KI, die sich als Mensch tarnt. Dann stimmst du ab – und siehst, was die Zuschauer
-              tippen.
+              KI, die sich als Mensch tarnt. Dann stimmst du ab.
             </p>
           </div>
           <form
@@ -298,27 +288,10 @@ function Game() {
                   {guess === secret ? `Richtig, ${nick}!` : "Reingelegt."}
                 </p>
               </div>
-              <div>
-                <p className="mb-2 font-mono text-xs text-muted-foreground">
-                  Zuschauer-Votes ({crowd.total})
-                </p>
-                <div className="flex h-8 overflow-hidden rounded-md font-mono text-xs font-bold text-primary-foreground">
-                  <div className="flex items-center bg-human pl-2" style={{ width: `${(crowd.human / crowd.total) * 100}%` }}>
-                    {Math.round((crowd.human / crowd.total) * 100)}%
-                  </div>
-                  <div className="flex flex-1 items-center justify-end bg-synth pr-2">
-                    {Math.round((crowd.synth / crowd.total) * 100)}%
-                  </div>
-                </div>
-                <div className="mt-1 flex justify-between font-mono text-xs text-muted-foreground">
-                  <span>Mensch</span>
-                  <span>Synth</span>
-                </div>
-              </div>
               {secret === "human" && (
                 <p className="text-xs text-muted-foreground">
                   * Im Solo-Modus wird der Mensch von einer KI gespielt, die sich wie ein echter
-                  Mensch verhält. Zuschauer-Votes sind simuliert.
+                  Mensch verhält.
                 </p>
               )}
               <Button size="lg" className="h-12 w-full glow font-bold" onClick={start}>
