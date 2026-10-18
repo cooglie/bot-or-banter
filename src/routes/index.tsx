@@ -38,6 +38,7 @@ function Game() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
+  const [showTyping, setShowTyping] = useState(false);
   const [left, setLeft] = useState(ROUND);
   const [guess, setGuess] = useState<Secret | null>(null);
   const [crowd, setCrowd] = useState({ human: 0, synth: 0, total: 0 });
@@ -55,13 +56,14 @@ function Game() {
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [msgs, typing]);
+  }, [msgs, showTyping]);
 
   useEffect(() => {
     if (phase !== "chat") return;
     if (left <= 0) {
       abortRef.current?.abort();
       setTyping(false);
+      setShowTyping(false);
       setPhase("vote");
       return;
     }
@@ -118,8 +120,25 @@ function Game() {
         if (done) break;
         reply += dec.decode(value, { stream: true });
       }
-      // human-like typing delay
-      await new Promise((r) => setTimeout(r, Math.min(2500, 400 + reply.length * 45)));
+      // human-like timing: read, think, then type (with pauses)
+      const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const rand = (a: number, b: number) => a + Math.random() * (b - a);
+      const readMs = 600 + text.length * rand(25, 45) + rand(300, 1800);
+      const typeMs = reply.trim().length * rand(140, 240);
+      const total = Math.min(11000, readMs + typeMs);
+      const read = Math.min(readMs, total * 0.4);
+      await wait(read);
+      if (!ctrl.signal.aborted) setShowTyping(true);
+      let typed = total - read;
+      if (typed > 3500 && Math.random() < 0.4) {
+        const pauseAt = typed * rand(0.3, 0.6);
+        await wait(pauseAt);
+        setShowTyping(false);
+        await wait(rand(700, 1600));
+        if (!ctrl.signal.aborted) setShowTyping(true);
+        typed -= pauseAt;
+      }
+      await wait(typed);
       if (!ctrl.signal.aborted && reply.trim()) {
         setMsgs((m) => [...m, { role: "assistant", content: reply.trim() }]);
       }
@@ -127,6 +146,7 @@ function Game() {
       if (!ctrl.signal.aborted) setError((err as Error).message);
     } finally {
       setTyping(false);
+      setShowTyping(false);
       inputRef.current?.focus();
     }
   }
@@ -224,7 +244,7 @@ function Game() {
                 </div>
               </div>
             ))}
-            {typing && (
+            {showTyping && (
               <div className="font-mono text-xs text-muted-foreground">
                 {alias} tippt<span className="caret">_</span>
               </div>
