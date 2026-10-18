@@ -73,7 +73,7 @@ function Game() {
     if (!nick.trim()) return;
     localStorage.setItem("hos-nick", nick.trim());
     setSecret(Math.random() < 0.5 ? "human" : "synth");
-    setAlias(ALIASES[Math.floor(Math.random() * ALIASES.length)]);
+    setAlias(ALIASES[Math.floor(Math.random() * ALIASES.length)] ?? "Nova");
     setMsgs([]);
     setGuess(null);
     setError(null);
